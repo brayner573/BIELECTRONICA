@@ -90,6 +90,30 @@ class AlertaController extends Controller
     {
         $this->requireAuth();
         $empresaId = $this->getEmpresaId();
+        $db = Database::getInstance();
+
+        // Si es consulta inicial (init) o de polling (ajax/last_id)
+        if (isset($_GET['init']) || isset($_GET['last_id'])) {
+            if (isset($_GET['init'])) {
+                $stmtMax = $db->prepare("SELECT MAX(id) as max_id FROM alertas WHERE empresa_id = ?");
+                $stmtMax->execute([$empresaId]);
+                $rowMax = $stmtMax->fetch();
+                $this->json(['last_id' => (int)($rowMax['max_id'] ?? 0)]);
+                return;
+            }
+
+            $lastId = (int)$_GET['last_id'];
+            $stmt = $db->prepare("
+                SELECT id, tipo, nivel, titulo, mensaje, created_at 
+                FROM alertas 
+                WHERE empresa_id = ? AND id > ? AND estado = 'nueva'
+                ORDER BY id ASC
+            ");
+            $stmt->execute([$empresaId, $lastId]);
+            $nuevas = $stmt->fetchAll();
+            $this->json(['nuevas' => $nuevas]);
+            return;
+        }
 
         // Evitar bloqueo de sesiones concurrentes
         session_write_close();
@@ -107,8 +131,6 @@ class AlertaController extends Controller
         header('Cache-Control: no-cache');
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
-
-        $db = Database::getInstance();
 
         // Obtener el ID de la alerta más reciente al momento de conectar para no repetir alertas anteriores
         $stmtMax = $db->prepare("SELECT MAX(id) as max_id FROM alertas WHERE empresa_id = ?");

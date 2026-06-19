@@ -293,23 +293,43 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* ── Listener de Alertas en Tiempo Real via SSE ────────────────── */
-const urlBaseSSE = '<?= $config['url'] ?>';
-const eventSourceSSE = new EventSource(urlBaseSSE + '/alertas/stream');
+/* ── Listener de Alertas en Tiempo Real via Polling ────────────────── */
+const urlBasePoll = '<?= $config['url'] ?>';
+let lastCheckedAlertId = 0;
 
-eventSourceSSE.onmessage = function(event) {
+// Obtener el ID de la alerta más reciente al cargar la página
+async function initAlertsCheck() {
   try {
-    const alerta = JSON.parse(event.data);
-    mostrarToastAlerta(alerta);
-    actualizarBadgesAlertas();
+    const res = await fetch(urlBasePoll + '/alertas/stream?init=1');
+    const data = await res.json();
+    if (data && data.last_id) {
+      lastCheckedAlertId = data.last_id;
+    }
   } catch (err) {
-    console.error('Error parseando alerta SSE:', err);
+    console.error('Error inicializando alertas:', err);
   }
-};
+}
 
-eventSourceSSE.onerror = function(err) {
-  console.warn('Error en la conexión EventSource SSE, reintentando...', err);
-};
+async function checkNewAlerts() {
+  try {
+    const res = await fetch(urlBasePoll + '/alertas/stream?last_id=' + lastCheckedAlertId);
+    const data = await res.json();
+    if (data && data.nuevas && data.nuevas.length > 0) {
+      data.nuevas.forEach(alerta => {
+        mostrarToastAlerta(alerta);
+        actualizarBadgesAlertas();
+        lastCheckedAlertId = Math.max(lastCheckedAlertId, parseInt(alerta.id));
+      });
+    }
+  } catch (err) {
+    // Silencioso para evitar spam en consola en desarrollo local
+  }
+}
+
+initAlertsCheck().then(() => {
+  // Consultar nuevas alertas cada 10 segundos
+  setInterval(checkNewAlerts, 10000);
+});
 
 function mostrarToastAlerta(alerta) {
   const container = document.getElementById('toast-container');

@@ -1,0 +1,11 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /SISTEMA_FAXEL/public/
+
+# Servir archivos estáticos directamente
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Todo lo demás pasa por index.php
+RewriteRule ^ index.php [L]

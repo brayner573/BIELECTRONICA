@@ -1,0 +1,30 @@
+{
+  "name": "FAXEL Business Intelligence + IA",
+  "short_name": "FAXEL BI",
+  "description": "Plataforma SaaS empresarial de Inteligencia de Negocios y Facturación Electrónica con IA predictiva.",
+  "start_url": "./dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E53E3E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/img/logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/logo-maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/img/logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ]
+}

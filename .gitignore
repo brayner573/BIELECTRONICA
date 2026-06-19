@@ -1,0 +1,15 @@
+/logs/
+/uploads/
+/reports/
+/public/uploads/
+/python_ai/storage/models/*.joblib
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.idea/
+.vscode/
+vendor/
+node_modules/
+.DS_Store
+Thumbs.db

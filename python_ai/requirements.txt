@@ -1,0 +1,32 @@
+# FAXEL BI — Python AI Dependencies
+# Instalar con: pip install -r requirements.txt
+
+# ── Core ──────────────────────────────────────────────────
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# ── Base de datos ─────────────────────────────────────────
+mysql-connector-python>=8.3.0
+
+# ── Ciencia de datos ──────────────────────────────────────
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# ── Machine Learning ──────────────────────────────────────
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+
+# ── Predicción temporal ───────────────────────────────────
+prophet>=1.1.5
+# Nota: prophet requiere pystan. En Windows usar:
+# conda install -c conda-forge prophet
+# o: pip install prophet
+
+# ── Opcional: LLM ─────────────────────────────────────────
+# openai>=1.0.0       # Para OpenAI GPT
+# ollama              # Para Ollama local
+
+# ── Utilidades ────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.31.0

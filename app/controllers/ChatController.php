@@ -127,6 +127,58 @@ class ChatController extends Controller
         $this->redirect('/chat');
     }
 
+    public function transcribir(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->requirePermission('chat.use');
+        
+        if (!isset($_FILES['audio']) || $_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'No se recibió archivo de audio válido.'], 400);
+            return;
+        }
+
+        $fileTmpPath = $_FILES['audio']['tmp_name'];
+        $fileName    = $_FILES['audio']['name'];
+        $fileType    = $_FILES['audio']['type'];
+
+        // Enviar al microservicio de Python
+        $pythonUrl = $this->config['python_ai']['base_url'] . '/audio/transcribe';
+        
+        $ch = curl_init($pythonUrl);
+        $curlFile = new CURLFile($fileTmpPath, $fileType, $fileName);
+        
+        $payload = [
+            'file' => $curlFile
+        ];
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $httpCode >= 400) {
+            Logger::error("Error de transcripción en Python AI: HTTP $httpCode");
+            $this->json(['error' => 'El microservicio de transcripción de audio no respondió.'], 500);
+            return;
+        }
+
+        $resData = json_decode($response, true);
+        if (isset($resData['success']) && $resData['success']) {
+            $this->json([
+                'success' => true,
+                'texto'   => $resData['text']
+            ]);
+        } else {
+            $this->json(['error' => $resData['error'] ?? 'Fallo al transcribir.'], 400);
+        }
+    }
+
     /**
      * Analizador SQL local — responde preguntas empresariales comunes de forma aislada
      */

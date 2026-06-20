@@ -541,6 +541,68 @@ def train_model():
         return jsonify({'error': str(e)}), 500
 
 
+# ── NUEVO: Transcripción de Audio (Whisper / Fallback) ────
+@app.route('/audio/transcribe', methods=['POST'])
+def audio_transcribe():
+    """
+    Recibe un archivo de audio WAV y lo transcribe a texto usando SpeechRecognition (Whisper o Google Fallback)
+    """
+    temp_path = None
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'Archivo de audio no provisto.'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Archivo de audio vacío.'}), 400
+
+        # Guardar archivo temporalmente
+        temp_dir = os.path.join(os.path.dirname(__file__), 'storage', 'temp')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir, exist_ok=True)
+            
+        temp_path = os.path.join(temp_dir, f"audio_{int(datetime.now().timestamp())}.wav")
+        file.save(temp_path)
+        
+        # Cargar con SpeechRecognition
+        import speech_recognition as sr
+        r = sr.Recognizer()
+        
+        text = ""
+        with sr.AudioFile(temp_path) as source:
+            audio_data = r.record(source)
+            
+            # Intentar primero recognize_google (Google Cloud Speech API gratuita y rápida en español)
+            # como fallback recognize_whisper (Whisper local de OpenAI)
+            try:
+                text = r.recognize_google(audio_data, language='es-PE')
+                logger.info(f"Transcripción exitosa (Google API): {text}")
+            except Exception as e:
+                logger.warning(f"Google API falló: {e}. Intentando recognize_whisper local.")
+                try:
+                    text = r.recognize_whisper(audio_data, language='spanish')
+                    logger.info(f"Transcripción exitosa (Whisper local): {text}")
+                except Exception as ex:
+                    logger.error(f"Todos los reconocedores fallaron: {ex}")
+                    return jsonify({'error': 'No se pudo transcribir el audio.'}), 500
+
+        return jsonify({
+            'success': True,
+            'text': text
+        })
+
+    except Exception as e:
+        logger.error(f"Error en /audio/transcribe: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    finally:
+        # Eliminar archivo temporal si existe
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception as ex:
+                logger.warning(f"No se pudo eliminar archivo temporal {temp_path}: {ex}")
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     logger.info(f"FAXEL BI Python AI Server -> http://localhost:{port}")

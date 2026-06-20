@@ -4,7 +4,6 @@ $countAlto  = count(array_filter($clientes, fn($c) => $c['churn_riesgo'] === 'al
 $countMedio = count(array_filter($clientes, fn($c) => $c['churn_riesgo'] === 'medio'));
 $countBajo  = count(array_filter($clientes, fn($c) => $c['churn_riesgo'] === 'bajo'));
 ?>
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <div class="row mb-4 animate-in">
   <div class="col-12 d-flex justify-content-between align-items-center">

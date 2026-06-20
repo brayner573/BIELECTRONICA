@@ -1,4 +1,3 @@
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <div class="row mb-4">
   <div class="col-12 d-flex justify-content-between align-items-center">

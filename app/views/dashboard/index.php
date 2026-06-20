@@ -20,7 +20,6 @@ foreach ($alertaStats as $s) {
 ?>
 
 <!-- ══ META CSRF ══════════════════════════════════════════ -->
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <!-- ══ FILTROS ════════════════════════════════════════════ -->
 <div class="card-glass p-4 mb-4 animate-in" style="border-color: var(--border-accent);">

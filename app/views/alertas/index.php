@@ -6,7 +6,6 @@ foreach ($stats as $s) {
   $statsByEstado[$s['estado']] = ($statsByEstado[$s['estado']] ?? 0) + (int)$s['cantidad'];
 }
 ?>
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <!-- ── Stats ─────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
@@ -31,16 +30,35 @@ foreach ($stats as $s) {
 </div>
 
 <!-- ── Controles ─────────────────────────────────────── -->
-<div class="card-glass p-3 mb-4 animate-in" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-  <span class="text-muted text-xs">Filtrar:</span>
-  <a href="?nivel=danger"  class="btn-bi danger  sm">🔴 Críticas</a>
-  <a href="?nivel=warning" class="btn-bi secondary sm" style="color:var(--warning);border-color:rgba(245,158,11,0.3);">🟡 Advertencias</a>
-  <a href="?estado=nueva"  class="btn-bi primary sm">Nuevas</a>
-  <a href="?estado=revisada" class="btn-bi secondary sm">Revisadas</a>
-  <a href="?"              class="btn-bi secondary sm">Todas</a>
+<div class="card-glass p-3 mb-4 animate-in" style="display:flex;gap:15px;flex-wrap:wrap;align-items:center;">
+  <div style="display:flex;gap:8px;align-items:center;min-width:220px;flex:1;">
+    <span class="text-muted text-xs">Buscar:</span>
+    <input type="text" id="buscarTexto" placeholder="Buscar por título o descripción..." class="input-bi" style="padding: 6px 12px; font-size:13px; margin:0; flex:1;">
+  </div>
+  
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span class="text-muted text-xs">Nivel:</span>
+    <select id="selectNivel" class="input-bi" style="padding: 6px 12px; font-size:13px; margin:0; width:160px;">
+      <option value="">Todos los niveles</option>
+      <option value="danger" <?= $nivel === 'danger' ? 'selected' : '' ?>>🔴 Críticas (Danger)</option>
+      <option value="warning" <?= $nivel === 'warning' ? 'selected' : '' ?>>🟡 Advertencias (Warning)</option>
+      <option value="info" <?= $nivel === 'info' ? 'selected' : '' ?>>🔵 Informativas (Info)</option>
+      <option value="success" <?= $nivel === 'success' ? 'selected' : '' ?>>🟢 Positivas (Success)</option>
+    </select>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span class="text-muted text-xs">Estado:</span>
+    <select id="selectEstado" class="input-bi" style="padding: 6px 12px; font-size:13px; margin:0; width:130px;">
+      <option value="">Todos los estados</option>
+      <option value="nueva" <?= $estado === 'nueva' ? 'selected' : '' ?>>Nueva</option>
+      <option value="revisada" <?= $estado === 'revisada' ? 'selected' : '' ?>>Revisada</option>
+      <option value="resuelta" <?= $estado === 'resuelta' ? 'selected' : '' ?>>Resuelta</option>
+    </select>
+  </div>
 
   <div style="margin-left:auto;display:flex;gap:8px;">
-    <button class="btn-bi secondary sm" onclick="generarAlertas()">
+    <button class="btn-bi secondary sm" onclick="generarAlertas()" style="height:36px;">
       <i class="bi bi-lightning-charge"></i> Generar Automáticas
     </button>
     <div id="genStatus" style="font-size:13px;color:var(--text-muted);align-self:center;"></div>
@@ -51,7 +69,10 @@ foreach ($stats as $s) {
 <div class="animate-in">
   <div id="alertasList">
     <?php foreach ($alertas as $a): ?>
-    <div class="alert-card <?= Security::e($a['nivel']) ?>" id="alerta-<?= $a['id'] ?>">
+    <div class="alert-card <?= Security::e($a['nivel']) ?>" id="alerta-<?= $a['id'] ?>"
+         data-nivel="<?= Security::e($a['nivel']) ?>"
+         data-estado="<?= Security::e($a['estado']) ?>"
+         data-search="<?= Security::e(mb_strtolower($a['titulo'] . ' ' . $a['mensaje'])) ?>">
       <div class="alert-card-icon" style="padding-top:2px;">
         <?= match($a['nivel']) { 'danger'=>'🔴','warning'=>'🟡','success'=>'🟢',default=>'🔵' } ?>
       </div>
@@ -89,7 +110,7 @@ foreach ($stats as $s) {
     </div>
     <?php endforeach; ?>
     <?php if (empty($alertas)): ?>
-    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+    <div id="emptyMessage" style="text-align:center;padding:60px;color:var(--text-muted);">
       <i class="bi bi-check-all" style="font-size:48px;color:var(--success);"></i>
       <h3 class="mt-3">Todo en orden</h3>
       <p>No hay alertas con los filtros seleccionados.</p>
@@ -116,7 +137,10 @@ async function resolverAlerta(id) {
     const el = document.getElementById(`alerta-${id}`);
     el.style.opacity = '0.4';
     el.style.transition = 'opacity 0.5s';
-    setTimeout(() => el.remove(), 500);
+    setTimeout(() => {
+      el.remove();
+      aplicarFiltros();
+    }, 500);
   }
 }
 
@@ -145,4 +169,61 @@ async function generarAlertas() {
     if (data.creadas > 0) setTimeout(() => location.reload(), 1500);
   }
 }
+
+function aplicarFiltros() {
+  const query = document.getElementById('buscarTexto').value.toLowerCase().trim();
+  const nivel = document.getElementById('selectNivel').value;
+  const estado = document.getElementById('selectEstado').value;
+  
+  const cards = document.querySelectorAll('.alert-card');
+  let mostrados = 0;
+  
+  cards.forEach(card => {
+    const cardNivel = card.dataset.nivel;
+    const cardEstado = card.dataset.estado;
+    const cardSearch = card.dataset.search;
+    
+    const matchesSearch = !query || cardSearch.includes(query);
+    const matchesNivel = !nivel || cardNivel === nivel;
+    const matchesEstado = !estado || cardEstado === estado;
+    
+    if (matchesSearch && matchesNivel && matchesEstado) {
+      card.style.display = 'flex';
+      mostrados++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+  
+  // Mostrar mensaje de no hay resultados si mostrados === 0
+  const existingNoResults = document.getElementById('noResultsMessage');
+  const emptyMessage = document.getElementById('emptyMessage');
+  
+  if (mostrados === 0) {
+    if (emptyMessage) emptyMessage.style.display = 'none';
+    if (!existingNoResults) {
+      const msg = document.createElement('div');
+      msg.id = 'noResultsMessage';
+      msg.style.textAlign = 'center';
+      msg.style.padding = '60px';
+      msg.style.color = 'var(--text-muted)';
+      msg.innerHTML = `
+        <i class="bi bi-search" style="font-size:40px;display:block;margin-bottom:10px;color:var(--text-muted);"></i>
+        <h4 style="font-size:16px;font-weight:700;">Sin resultados</h4>
+        <p style="font-size:13px;margin:0;">No se encontraron alertas con los filtros seleccionados.</p>
+      `;
+      document.getElementById('alertasList').appendChild(msg);
+    }
+  } else {
+    if (emptyMessage) emptyMessage.style.display = 'block';
+    if (existingNoResults) existingNoResults.remove();
+  }
+}
+
+document.getElementById('buscarTexto').addEventListener('input', aplicarFiltros);
+document.getElementById('selectNivel').addEventListener('change', aplicarFiltros);
+document.getElementById('selectEstado').addEventListener('change', aplicarFiltros);
+
+// Aplicar filtros iniciales (de los selectores)
+aplicarFiltros();
 </script>

@@ -2,7 +2,6 @@
 $kpisAv = $kpisAvanzados;
 $appUrl = $config['url'];
 ?>
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <!-- ── KPIs Grid ──────────────────────────────────────── -->
 <div class="row g-3 mb-4">

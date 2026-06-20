@@ -40,6 +40,7 @@ $router->post('/alertas/generar',         ['AlertaController', 'generar']);
 // ── Chat IA ───────────────────────────────────────────────
 $router->get('/chat',            ['ChatController', 'index']);
 $router->post('/chat/enviar',    ['ChatController', 'enviar']);
+$router->post('/chat/transcribir', ['ChatController', 'transcribir']);
 $router->get('/chat/nueva',      ['ChatController', 'nuevaSesion']);
 
 // ── Reportes ──────────────────────────────────────────────

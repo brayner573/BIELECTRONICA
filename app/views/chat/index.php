@@ -2,7 +2,6 @@
 $user = Session::get('user');
 $initMessages = json_encode($mensajes ?? []);
 ?>
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <!-- ── Sugerencias de consulta ────────────────────────────── -->
 <div class="row g-3 mb-4">

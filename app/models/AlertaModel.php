@@ -127,6 +127,30 @@ class AlertaModel extends Model
             }
         }
 
+        // 3) Stock crítico: productos con stock <= 10
+        $stmt = $db->prepare("
+            SELECT id, nombre, stock FROM productos
+            WHERE activo = 1 AND empresa_id = ? AND stock <= 10
+        ");
+        $stmt->execute([$empresaId]);
+        $criticos = $stmt->fetchAll();
+        foreach ($criticos as $prod) {
+            $check = $db->prepare("
+                SELECT id FROM alertas
+                WHERE tipo = 'stock_bajo' AND empresa_id = ? AND entidad_id = ? AND estado != 'resuelta'
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 48 HOUR)
+            ");
+            $check->execute([$empresaId, $prod['id']]);
+            if (!$check->fetch()) {
+                $this->crearAlerta($empresaId, 'stock_bajo', 'warning',
+                    "Stock Crítico: {$prod['nombre']}",
+                    "El stock de este producto es de {$prod['stock']} unidades. Se recomienda reabastecer.",
+                    'producto', (int)$prod['id']
+                );
+                $creadas++;
+            }
+        }
+
         return $creadas;
     }
 }

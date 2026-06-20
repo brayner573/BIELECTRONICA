@@ -52,6 +52,51 @@ class PrediccionController extends Controller
         $this->requirePermission('prediccion.train');
         $empresaId = $this->getEmpresaId();
 
+        $tipo = $this->post('tipo', 'ventas');
+
+        if ($tipo === 'churn') {
+            $clienteModel = new ClienteModel();
+            $clientes     = $clienteModel->churnRanking($empresaId, '', 500);
+
+            if ($this->config['python_ai']['enabled']) {
+                $datosClientes = array_map(fn($c) => [
+                    'id'              => $c['id'],
+                    'dias_sin_compra' => $c['dias_sin_compra'],
+                    'total_compras'   => $c['total_compras'],
+                    'ticket_promedio' => $c['ticket_promedio'],
+                    'monto_acumulado' => $c['monto_acumulado'],
+                ], $clientes);
+
+                $scores = $this->callPythonAI('/churn/score', [
+                    'clientes'   => $datosClientes,
+                    'empresa_id' => $empresaId,
+                ]);
+
+                if ($scores) {
+                    $db = Database::getInstance();
+                    foreach ($scores['resultados'] ?? [] as $r) {
+                        $db->prepare("UPDATE clientes SET churn_score = ?, churn_riesgo = ? WHERE id = ? AND empresa_id = ?")
+                           ->execute([$r['score'], $r['riesgo'], $r['id'], $empresaId]);
+                    }
+                    $this->json([
+                        'success' => true,
+                        'message' => 'Scores de Churn actualizados correctamente con IA.',
+                    ]);
+                    return;
+                }
+            }
+
+            // Fallback: usar el procedimiento almacenado local si la IA no está disponible
+            $db = Database::getInstance();
+            $db->prepare("CALL sp_recalcular_todos_churn(?)")->execute([$empresaId]);
+            $this->json([
+                'success'  => true,
+                'message'  => 'Scores de Churn actualizados (usando fallback local).',
+                'fallback' => true
+            ]);
+            return;
+        }
+
         // Obtener serie temporal de ventas
         $serieVentas = $this->ventaModel->serieTemporalVentas($empresaId, 365);
 

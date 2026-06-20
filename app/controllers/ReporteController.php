@@ -83,12 +83,94 @@ class ReporteController extends Controller
     {
         $this->requireAuth();
         $empresaId = $this->getEmpresaId();
+        $tipo = $this->get('tipo', 'ventas');
 
+        if ($tipo === 'rentabilidad') {
+            $productoModel = new ProductoModel();
+            // Actualizar clasificación ABC para garantizar datos frescos
+            $productoModel->actualizarClasificacionABC($empresaId);
+            $productos = $productoModel->topRentables($empresaId, 100);
+
+            $filename = 'FAXEL_BI_Rentabilidad_Productos_' . date('Y-m-d') . '.csv';
+
+            header('Content-Type: text/csv; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+            header('Cache-Control: no-cache');
+
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+
+            fputcsv($out, [
+                'Posición', 'Código', 'Producto', 'Categoría', 'Clasificación ABC', 
+                'Precio Venta (S/)', 'Costo Unitario (S/)', 'Unidades Vendidas', 
+                'Ingresos (S/)', 'Utilidad (S/)', 'Margen (%)'
+            ]);
+
+            foreach ($productos as $i => $p) {
+                fputcsv($out, [
+                    $i + 1,
+                    $p['codigo'],
+                    $p['nombre'],
+                    $p['categoria'] ?? 'Sin Categoría',
+                    $p['clasificacion'],
+                    number_format($p['precio_venta'], 2, '.', ''),
+                    number_format($p['precio_costo'], 2, '.', ''),
+                    $p['unidades_vendidas'],
+                    number_format($p['ingresos'], 2, '.', ''),
+                    number_format($p['utilidad'], 2, '.', ''),
+                    number_format($p['margen'], 1, '.', '')
+                ]);
+            }
+            fclose($out);
+            exit;
+        }
+
+        if ($tipo === 'churn') {
+            $clienteModel = new ClienteModel();
+            $clientes = $clienteModel->churnRanking($empresaId, '', 500);
+
+            $filename = 'FAXEL_BI_Riesgo_Churn_Clientes_' . date('Y-m-d') . '.csv';
+
+            header('Content-Type: text/csv; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+            header('Cache-Control: no-cache');
+
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+
+            fputcsv($out, [
+                'Código Cliente', 'Razón Social', 'RUC/DNI', 'Email', 'Teléfono', 
+                'Ciudad', 'Categoría Cliente', 'Riesgo Churn', 'Score Churn (0-100)', 
+                'Última Compra', 'Días Inactivo', 'Total Compras', 'Monto Acumulado (S/)', 'Ticket Promedio (S/)'
+            ]);
+
+            foreach ($clientes as $c) {
+                fputcsv($out, [
+                    $c['codigo'],
+                    $c['razon_social'],
+                    $c['ruc_dni'],
+                    $c['email'] ?? '—',
+                    $c['telefono'] ?? '—',
+                    $c['ciudad'] ?? '—',
+                    $c['categoria'] ?? 'regular',
+                    ucfirst($c['churn_riesgo']),
+                    $c['churn_score'],
+                    $c['ultima_compra'] ? date('d/m/Y', strtotime($c['ultima_compra'])) : '—',
+                    $c['dias_sin_compra'] ?? '—',
+                    $c['total_compras'],
+                    number_format($c['monto_acumulado'], 2, '.', ''),
+                    number_format($c['ticket_promedio'], 2, '.', '')
+                ]);
+            }
+            fclose($out);
+            exit;
+        }
+
+        // Default: Comparativa mensual de ventas
         $ventaModel = new VentaModel();
         $ventas     = $ventaModel->comparativaMensual($empresaId, 12);
 
-        // Generar CSV como fallback de Excel
-        $filename = 'FAXEL_BI_Reporte_' . date('Y-m-d') . '.csv';
+        $filename = 'FAXEL_BI_Reporte_Ventas_' . date('Y-m-d') . '.csv';
 
         header('Content-Type: text/csv; charset=utf-8');
         header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -97,7 +179,7 @@ class ReporteController extends Controller
         $out = fopen('php://output', 'w');
         fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
 
-        fputcsv($out, ['Mes', 'Ventas (S/ )', 'Utilidad (S/ )', 'Transacciones']);
+        fputcsv($out, ['Mes', 'Ventas (S/)', 'Utilidad (S/)', 'Transacciones']);
         foreach ($ventas as $v) {
             fputcsv($out, [
                 $v['mes'],

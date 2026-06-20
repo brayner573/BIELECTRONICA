@@ -4,7 +4,6 @@ $paretoJson  = json_encode(array_values($paretoData));
 $paretoAcumJ = json_encode(array_values($paretoAcum));
 $abcJson     = json_encode(array_values($distABC));
 ?>
-<meta name="csrf-token" content="<?= Security::generateCSRF() ?>">
 
 <!-- ── Resumen ABC ─────────────────────────────────────── -->
 <div class="row g-3 mb-4">
@@ -62,7 +61,7 @@ $abcJson     = json_encode(array_values($distABC));
           <div class="chart-subtitle">Ordenados por utilidad generada en el período</div>
         </div>
         <div class="flex gap-2">
-          <a href="<?= $config['url'] ?>/reportes/excel" class="btn-bi secondary sm">
+          <a href="<?= $config['url'] ?>/reportes/excel?tipo=rentabilidad" class="btn-bi secondary sm">
             <i class="bi bi-file-earmark-excel"></i> Exportar CSV
           </a>
         </div>

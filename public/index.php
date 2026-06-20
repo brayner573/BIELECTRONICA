@@ -18,6 +18,7 @@ spl_autoload_register(function(string $class): void {
         CORE,
         APP . '/controllers',
         APP . '/models',
+        APP . '/services',
     ];
     foreach ($paths as $path) {
         $file = "$path/{$class}.php";

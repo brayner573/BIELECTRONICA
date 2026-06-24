@@ -58,18 +58,18 @@ El proyecto cuenta con un script automatizado para la creación de esquemas y ca
 Edita el archivo de configuración global en [config/app.php](file:///d:/SISTEMA_FAXEL/config/app.php) para configurar los entornos:
 ```php
 return [
-    'url' => 'http://localhost/SISTEMA_FAXEL/public', // Ajusta según tu ruta en Apache
+    'url' => 'http://localhost:8080/SISTEMA_FAXEL/public', // Ajusta según tu ruta en Apache o puerto alternativo
     // ...
 ];
 ```
-*(Nota: Si usas el servidor web integrado de PHP en el puerto 80, la URL del sistema será `http://localhost/public` o `http://localhost` si configuras el root en public).*
+*(Nota: Si usas el servidor web integrado de PHP en el puerto 8080, la URL del sistema será `http://localhost:8080/SISTEMA_FAXEL/public`).*
 
 #### Paso 3 — Iniciar el Servidor Web PHP
 - **Si usas XAMPP/Laragon**: Coloca la carpeta del proyecto en `htdocs` o `www` y accede mediante Apache.
 - **Si usas la terminal con el router integrado (Desarrollo directo)**:
   Ejecuta el siguiente comando en la raíz del proyecto `d:\SISTEMA_FAXEL`:
   ```powershell
-  php -S localhost:80 router.php
+  php -S localhost:8080 router.php
   ```
   *(El archivo [router.php](file:///d:/SISTEMA_FAXEL/router.php) redirigirá automáticamente todas las solicitudes de páginas al controlador frontal e index global de manera limpia).*
 
@@ -176,7 +176,7 @@ curl http://localhost:5000/health
 ```
 
 ### Credenciales de Acceso Demo:
-Accede a `http://localhost/SISTEMA_FAXEL/public/login` e ingresa:
+Accede a `http://localhost:8080/SISTEMA_FAXEL/public/login` e ingresa:
 - **Administrador**: `admin@faxel.pe` | Clave: `password`
 - **Gerente**: `gerente@faxel.pe` | Clave: `password`
 - **Analista**: `analista@faxel.pe` | Clave: `password`

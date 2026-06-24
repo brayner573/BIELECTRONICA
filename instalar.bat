@@ -52,10 +52,10 @@ echo   INSTALACION COMPLETADA EXITOSAMENTE
 echo  ===============================================
 echo.
 echo   Accede al sistema en:
-echo   http://localhost/SISTEMA_FAXEL/public/login
+echo   http://localhost:8080/SISTEMA_FAXEL/public/login
 echo.
 echo   Usuario: admin@faxel.pe
 echo   Clave:   password
 echo.
-start http://localhost/SISTEMA_FAXEL/public/login
+start http://localhost:8080/SISTEMA_FAXEL/public/login
 pause

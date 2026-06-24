@@ -745,7 +745,7 @@ let isGlobalRecording = false;
 let globalTTSActive = false;
 let globalInputEl = null;
 let globalMessagesEl = null;
-const globalAppUrlBase = '<?= $config['url'] ?>';
+const globalAppUrlBase = '<?= rtrim(parse_url($config['url'], PHP_URL_PATH) ?? "", "/") ?>';
 
 document.addEventListener('DOMContentLoaded', () => {
   globalInputEl = document.getElementById('global-chat-input');
@@ -1051,34 +1051,99 @@ class GlobalWavRecorder {
 }
 
 const globalWavRecorder = new GlobalWavRecorder();
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let globalRecognitionInstance = null;
 
 async function toggleGlobalRecording() {
   const micBtn = document.getElementById('global-chat-mic');
-  isGlobalRecording = !isGlobalRecording;
   
-  if (isGlobalRecording) {
-    micBtn.classList.add('recording');
-    micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>';
+  if (SpeechRecognition) {
+    if (isGlobalRecording) {
+      if (globalRecognitionInstance) {
+        globalRecognitionInstance.stop();
+      }
+      return;
+    }
+    
     try {
-      await globalWavRecorder.start();
+      if (!globalRecognitionInstance) {
+        globalRecognitionInstance = new SpeechRecognition();
+        globalRecognitionInstance.lang = 'es-PE';
+        globalRecognitionInstance.interimResults = false;
+        globalRecognitionInstance.maxAlternatives = 1;
+        
+        globalRecognitionInstance.onstart = () => {
+          isGlobalRecording = true;
+          micBtn.classList.add('recording');
+          micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>';
+        };
+        
+        globalRecognitionInstance.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          if (globalInputEl) {
+            globalInputEl.value = transcript;
+            sendGlobalMessage();
+          }
+        };
+        
+        globalRecognitionInstance.onerror = (event) => {
+          console.error('Error en SpeechRecognition:', event.error);
+          if (event.error === 'not-allowed') {
+            alert('Permiso de micrófono denegado. Habilita el acceso al micrófono en tu navegador.');
+          } else if (event.error === 'no-speech') {
+            // Silencioso o aviso rápido
+            console.log('No se detectó voz.');
+          } else {
+            alert('Error al reconocer voz: ' + event.error);
+          }
+          resetMicUI();
+        };
+        
+        globalRecognitionInstance.onend = () => {
+          resetMicUI();
+        };
+      }
+      
+      globalRecognitionInstance.start();
+      
     } catch (err) {
-      console.error('Error al acceder al micrófono:', err);
-      alert('No se pudo acceder al micrófono. Por favor, concede los permisos correspondientes.');
-      micBtn.classList.remove('recording');
-      micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-      isGlobalRecording = false;
+      console.error('Error al iniciar SpeechRecognition:', err);
+      await runLegacyWavRecorder();
     }
   } else {
+    await runLegacyWavRecorder();
+  }
+
+  function resetMicUI() {
+    isGlobalRecording = false;
     micBtn.classList.remove('recording');
-    micBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    micBtn.disabled = true;
-    
-    const audioBlob = globalWavRecorder.stop();
-    if (audioBlob) {
-      await transcribirAudioGlobal(audioBlob);
+    micBtn.disabled = false;
+    micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+  }
+
+  async function runLegacyWavRecorder() {
+    isGlobalRecording = !isGlobalRecording;
+    if (isGlobalRecording) {
+      micBtn.classList.add('recording');
+      micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>';
+      try {
+        await globalWavRecorder.start();
+      } catch (err) {
+        console.error('Error al acceder al micrófono:', err);
+        alert('No se pudo acceder al micrófono. Por favor, concede los permisos correspondientes.');
+        resetMicUI();
+      }
     } else {
-      micBtn.disabled = false;
-      micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      micBtn.disabled = true;
+      
+      const audioBlob = globalWavRecorder.stop();
+      if (audioBlob) {
+        await transcribirAudioGlobal(audioBlob);
+      } else {
+        resetMicUI();
+      }
     }
   }
 }

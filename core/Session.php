@@ -10,7 +10,8 @@ class Session
             $appCfg = require dirname(__DIR__) . '/config/app.php';
 
             ini_set('session.cookie_httponly', 1);
-            ini_set('session.cookie_samesite', 'Strict');
+            ini_set('session.cookie_samesite', 'Lax');
+            ini_set('session.cookie_path', '/');
             ini_set('session.gc_maxlifetime', $appCfg['session_lifetime']);
 
             session_name('FAXEL_SESSION');

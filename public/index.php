@@ -53,8 +53,27 @@ if ($appConfig['debug']) {
 Session::start();
 
 // ── Enrutamiento ─────────────────────────────────────────
-$basePath = '/SISTEMA_FAXEL/public';
-$router   = new Router($basePath);
+$basePath = '/SISTEMA_FAXEL/public'; // Fallback por defecto
+if (isset($_SERVER['SCRIPT_NAME'])) {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
+    $dir = dirname($script);
+    $dir = str_replace('\\', '/', $dir);
+    if ($dir === '/' || $dir === '.') {
+        $basePath = '';
+    } else {
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        // Si la URL física contiene '/public' pero la URL del navegador no,
+        // es por la reescritura invisible desde el .htaccess de la raíz.
+        if (str_contains($dir, '/public') && !str_contains($uri, '/public')) {
+            $basePath = str_replace('/public', '', $dir);
+            if ($basePath === '/') $basePath = '';
+        } else {
+            $basePath = rtrim($dir, '/');
+        }
+    }
+}
+
+$router = new Router($basePath);
 
 require ROOT . '/routes/web.php';
 

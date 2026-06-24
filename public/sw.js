@@ -1,7 +1,5 @@
-const CACHE_NAME = 'faxel-bi-cache-v5';
+const CACHE_NAME = 'faxel-bi-cache-v7';
 const ASSETS_TO_CACHE = [
-  './',
-  './dashboard',
   './assets/css/main.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
@@ -39,22 +37,36 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Skip POST, API, execution, stream or search calls
+  // Evitar interceptar peticiones POST, APIs, streams, ejecuciones, o la ruta de cerrar sesión
   if (
     event.request.method !== 'GET' || 
     url.pathname.includes('/api/') || 
     url.pathname.includes('/ejecutar') || 
     url.pathname.includes('/chat') || 
     url.pathname.includes('/stream') || 
-    url.pathname.includes('/facturas/crear')
+    url.pathname.includes('/logout')
   ) {
     return;
   }
 
+  // Comprobar si el recurso solicitado es un archivo estático pesado (estilos, scripts, imágenes, fuentes)
+  const isStatic = (
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|otf|json)$/i) ||
+    url.pathname.includes('/assets/') ||
+    url.href.includes('cdn.jsdelivr.net')
+  );
+
+  // Si NO es un recurso estático (es decir, es una página HTML dinámica como dashboard, reportes, alertas, etc.),
+  // la cargamos SIEMPRE de la red directamente para evitar CSRF obsoletos y consumo innecesario de caché.
+  if (!isStatic) {
+    return;
+  }
+
+  // Para recursos estáticos, usamos la estrategia Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       if (cachedResponse) {
-        // Fetch in background to update cache (stale-while-revalidate)
+        // Actualizar en segundo plano
         fetch(event.request).then(networkResponse => {
           if (networkResponse.status === 200) {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
@@ -64,66 +76,12 @@ self.addEventListener('fetch', event => {
       }
       
       return fetch(event.request).then(response => {
-        if (
-          response.status === 200 && 
-          url.origin === self.location.origin && 
-          !url.pathname.includes('/logout')
-        ) {
+        if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
         return response;
       });
-    }).catch(() => {
-      if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-        return caches.match('./dashboard');
-      }
-    })
-  );
-});
-
-// Push Notifications
-self.addEventListener('push', event => {
-  let data = { title: 'FAXEL BI', body: 'Nueva notificación inteligente' };
-  try {
-    if (event.data) {
-      data = event.data.json();
-    }
-  } catch (e) {
-    if (event.data) {
-      data.body = event.data.text();
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: 'assets/img/logo-192.png',
-    badge: 'assets/img/logo-192.png',
-    vibrate: [100, 50, 100],
-    data: {
-      url: data.url || './dashboard'
-    }
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      const targetUrl = event.notification.data.url;
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        if (client.url === targetUrl && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
     })
   );
 });

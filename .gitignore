@@ -13,3 +13,7 @@ vendor/
 node_modules/
 .DS_Store
 Thumbs.db
+
+# Credenciales locales y archivos comprimidos
+python_ai/.env
+SISTEMA_FAXEL.zip
